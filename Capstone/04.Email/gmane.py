@@ -1,9 +1,7 @@
 import sqlite3
 import time
 import ssl
-import urllib.request, urllib.parse, urllib.error
-from urllib.parse import urljoin
-from urllib.parse import urlparse
+import urllib.request, urllib.error
 import re
 from datetime import datetime, timedelta
 

@@ -4,7 +4,7 @@ conn = sqlite3.connect('')
 cur = conn.cursor()
 
 cur.execute('''
-    DROP TABLE IF EXIST Counts''')
+    DROP TABLE IF EXISTS Counts''')
 
 cur.execute('''
     CREATE TABLE Counts (email TEXT, count INTEGER)''')

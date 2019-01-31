@@ -1,6 +1,5 @@
-import sqlite3
+import sqlite3, os
 from bs4 import BeautifulSoup
-import glob, os
 
 def get_child(tag,classname):
     for i in range(len(tag.contents)):
@@ -16,19 +15,34 @@ def parsefile(file, start):
         if child != '\n' and child.get('class', 0) != 0 :
             с = ' '.join(child.attrs.get('class'))
             if с == 'message default clearfix':
-                body = get_child(child,'body')
+                body = get_child(child, 'body')
                 if body is None:
                     continue
                 date = get_child(body, 'pull_right date details').attrs.get('title')
-                sender = get_child(body, 'from_name').text.strip().replace('\n','')
+                sender = get_child(body, 'from_name').text.strip().replace('\n', '')
+                #Сусов Роман via @ya
+                if sender.find('via') != -1:
+                    sender = sender[:sender.find('via')]
+                sender = sender.strip()
                 texttag = get_child(body, 'text')
                 if not texttag is None:
                     text = texttag.text.strip().replace('\n','')
-                    #print(date, ', ', sender, ':', text)
                     cur.execute('''INSERT OR IGNORE INTO Messages (id, Sender, sent_at, message)
                             VALUES ( ?, ?, ?, ? )''', (start, sender, date, text))
                     start +=1
+            elif с == 'message default clearfix joined':
+                body = get_child(child, 'body')
+                if body is None:
+                    continue
+                date = get_child(body, 'pull_right date details').attrs.get('title')
+                texttag = get_child(body, 'text')
+                if not texttag is None:
+                    text = texttag.text.strip().replace('\n', '')
+                    cur.execute('''INSERT OR IGNORE INTO Messages (id, Sender, sent_at, message)
+                                           VALUES ( ?, ?, ?, ? )''', (start, sender, date, text))
+                    start += 1
     conn.commit()
+    return start
 
 conn = sqlite3.connect('content.sqlite')
 cur = conn.cursor()
@@ -37,13 +51,20 @@ start = 0
 cur.execute('''DROP TABLE IF EXISTS Messages''')
 cur.execute('''CREATE TABLE Messages (id INTEGER UNIQUE, Sender TEXT, sent_at TEXT, message TEXT)''')
 
-path = '/ChatExport_11_01_2019/'
+path = 'C:/ChatExport_11_01_2019/'
 os.chdir(path)
-for file in os.listdir(path):
-    a=file
+for filename in os.listdir(path):
+    file = open(os.path.join(path, filename), encoding="utf-8").read()
+    start = parsefile(file, start)
 
-#file = open("C:\Python\SourceFiles\Capstone\\05.Chatik_proj\ChatExport_11_01_2019\messages.html", encoding="utf-8").read()
-#parsefile(file, start)
+cur.execute('SELECT COUNT(*) FROM Messages ')
+row = cur.fetchone()
+if row is None:
+    print('There are no messages')
+else:
+    print('There are', row[0], 'messages in database')
+
+cur.close()
 
 #classes = list()
 #['message service', 'message default clearfix', 'message default clearfix joined', 'pagination block_link']
